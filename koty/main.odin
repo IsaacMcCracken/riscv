@@ -1,0 +1,6 @@
+package koty
+
+
+main :: proc() {
+  
+}

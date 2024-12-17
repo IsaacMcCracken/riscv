@@ -1,0 +1,3 @@
+square :: fun(x: int) -> int {
+  return x * x
+}
