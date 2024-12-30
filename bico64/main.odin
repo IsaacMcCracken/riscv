@@ -40,21 +40,22 @@ Register :: enum u8 {
 }
 
 Opcode_Kind :: enum u8 {
-  load      = 0b0000011,
-  op_imm    = 0b0010011, //
-  auipc     = 0b0010111,
-  op_imm_32 = 0b0011011,
-  store     = 0b0100011, 
+  load      = 0b0000011, // I type; l{b|h|w|d} or l{b|h|w}u
+  fence     = 0b0001111, // I type; fence or fence.i
+  op_imm    = 0b0010011, // I type; arithmetic or logical immediate
+  auipc     = 0b0010111, // U type
+  op_imm_32 = 0b0011011, // I type; addiw, slliw, srliw, sraiw
+  store     = 0b0100011, // S/I type; S type if s{b|h|w}, I type if sd
   store_FP  = 0b0100111,
-  op        = 0b0110011,
-  lui       = 0b0110111,
-  op_32     = 0b0111011,
+  op        = 0b0110011, // R type; arithmetic or logical no immediate
+  lui       = 0b0110111, // U type
+  op_32     = 0b0111011, // R type; addw, sllw, srlw, sraw
   op_FP     = 0b1010011,
   op_V      = 0b1010111,
-  branch    = 0b1100011,
-  jalr      = 0b1100111,
-  jal       = 0b1101111,
-  system    = 0b1110011, // cssr & environment calls
+  branch    = 0b1100011, // SB type, beq, bne, blt, bge, bltu, bgeu
+  jalr      = 0b1100111, // I type
+  jal       = 0b1101111, // UJ type
+  system    = 0b1110011, // I type; cssr & environment calls
 }
 
 Op_Imm_Funct3_Kind :: enum u8 {
