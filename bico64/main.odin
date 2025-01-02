@@ -7,6 +7,7 @@ import "core:slice"
 import "core:fmt"
 import "core:c"
 
+
 Register :: enum u8 {
   zero,
   ra,
@@ -71,7 +72,6 @@ Op_Imm_Funct3_Kind :: enum u8 {
   slli  = 0b001,
 }
 
-Op_Imm_Funct5_Kind 
 
 IntegerReg :: struct #raw_union {
   u: u64,
@@ -122,6 +122,7 @@ op_imm_execute :: proc(m: ^Machine, instruction: u32) {
     case .slli:
       shamt := (instruction >> 20) & 0b11111 
       funct5 := instruction >> 26
+      
 
   }
 }
