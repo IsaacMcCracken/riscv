@@ -24,7 +24,7 @@ ITypeInstruction :: struct {
 }
 
 decode_i_type :: proc(instruction: u32) -> ITypeInstruction {
-  immediate := (instruction >> 20) * 0xFFF
+  immediate := (u64)(instruction >> 20) * 0xFFF
   // sign extend immediate if bit 11 is set
   if (immediate & 0x800 != 0) {
       immediate |= 0xFFFFFFFFFFFFF000
@@ -48,8 +48,8 @@ STypeInstruction :: struct {
 }
 
 decode_s_type :: proc(instruction: u32) -> STypeInstruction {
-  immediate := (instruction >> 7) & 0x1F // imm[4:0]
-  immediate |= ((instruction >> 25) & 0x7F) << 5 // imm[11:5]
+  immediate := (u64)(instruction >> 7) & 0x1F // imm[4:0]
+  immediate |= (u64)((instruction >> 25) & 0x7F) << 5 // imm[11:5]
   // sign extend
   if (immediate & 0x800 != 0) {
     immediate |= 0xFFFFFFFFFFFFF000
@@ -64,10 +64,10 @@ decode_s_type :: proc(instruction: u32) -> STypeInstruction {
 }
 
 decode_sb_type :: proc(instruction: u32)  -> STypeInstruction {
-  immediate := ((instruction >> 8) & 0x1F) << 1 // imm[4:0]
-  immediate |= ((instruction >> 25) & 0x3F) << 5 // imm[10:5]
-  immediate |= ((instruction >> 7) & 0x1) << 11 // imm[11]
-  immediate |= ((instruction >> 31) & 0x1) << 12 // imm[12]
+  immediate := (u64)((instruction >> 8) & 0x1F) << 1 // imm[4:0]
+  immediate |= (u64)((instruction >> 25) & 0x3F) << 5 // imm[10:5]
+  immediate |= (u64)((instruction >> 7) & 0x1) << 11 // imm[11]
+  immediate |= (u64)((instruction >> 31) & 0x1) << 12 // imm[12]
   // sign extend
   if (immediate & 0x1000 != 0) {
     immediate |= 0xFFFFFFFFFFFFF000 // overlaps 12th bit but its or so who cares
@@ -89,17 +89,21 @@ UTypeInstruction :: struct {
 }
 
 decode_u_type :: proc(instruction: u32) -> UTypeInstruction {
+  immediate := (u64)(instruction & 0xFFFFF000)
+  if ((immediate >> 31) != 0) {
+    immediate |= 0xFFFFFFFF00000000
+  }
   return UTypeInstruction {
     rd = (u8) (instruction >> 7) & 0x1F,
-    imm = (i64) (instruction & 0xFFFFFFFFFFFFF000) // sets bottom 11:0 bits to 0
+    imm = transmute(i64) immediate // sets bottom 11:0 bits to 0
   }
 }
 
 decode_uj_type :: proc(instruction: u32) -> UTypeInstruction {
-  immediate := ((instruction >> 21) & 0x3FF) << 1 // imm[10:1]
-  immediate |= ((instruction >> 20) & 0x1) << 11 // imm[11]
-  immediate |= ((instruction >> 12) & 0xFF) << 12 // imm[19:12]
-  immediate |= ((instruction >> 31) & 0x1) << 20 // imm[20]
+  immediate := (u64)((instruction >> 21) & 0x3FF) << 1 // imm[10:1]
+  immediate |= (u64)((instruction >> 20) & 0x1) << 11 // imm[11]
+  immediate |= (u64)((instruction >> 12) & 0xFF) << 12 // imm[19:12]
+  immediate |= (u64)((instruction >> 31) & 0x1) << 20 // imm[20]
   // sign extend
   if (instruction & 0x100000 != 0) {
     immediate |= 0xFFFFFFFFFFF00000
