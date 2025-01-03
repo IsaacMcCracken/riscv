@@ -1,22 +1,17 @@
 package bico64
 
 // register operation
-RTypeInstruction :: struct {
-  rs1: u8, // source register
-  rs2: u8, // target register
-  rd: u8, // destination register
-  funct3: u8,
-  funct7: u8
+RTypeInstruction :: bit_field u32 {
+  opcode: u8 | 7,
+  rd: u8 | 5,// destination register
+  funct3: u8 | 3,
+  rs1: u8 | 5, // source register
+  rs2: u8 | 5, // target register
+  funct7: u8 | 7,
 }
 
 decode_r_type :: proc(instruction: u32) -> RTypeInstruction {
-  return RTypeInstruction {
-    rs1 = (u8) (instruction >> 15) & 0x1F,
-    rs2 = (u8) (instruction >> 20) & 0x1F,
-    rd = (u8) (instruction >> 7) & 0x1F,
-    funct3 = (u8) (instruction >> 12) & 0x7,
-    funct7 = (u8) (instruction >> 25) & 0x7F
-  }
+  return transmute(RTypeInstruction)instruction
 }
 
 
