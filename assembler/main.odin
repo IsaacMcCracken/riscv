@@ -15,7 +15,7 @@ assemble :: proc(a: ^Assembler) {
 main ::  proc() {
   
   
-  test : []byte = transmute([]byte)string("addi a0, a0, 69\nadd sp, gp, t0\n")
+  test : []byte = transmute([]byte)string("xori a0, a0, -1\nadd sp, gp, t0\n")
 
   a := assembler_init(&{}, test)
   assemble(a)
@@ -23,6 +23,10 @@ main ::  proc() {
 
   for instr in a.instructions {
     fmt.printfln("0x%08x", instr)
+  }
+
+  for error in a.errors {
+    fmt.println(error)
   }
   
 

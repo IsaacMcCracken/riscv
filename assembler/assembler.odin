@@ -7,14 +7,22 @@ import "core:unicode/utf8"
 import "core:text/scanner"
 import "core:unicode"
 import "core:fmt"
-import "core:math"
+import "core:strconv"
 
 smap := map[string]Token_Kind{
   // i-type instructions
-  "addi" = .Addi,
-  "jalr" = .Jalr,
+  "addi"  = .Addi,
+  "slti"  = .Slti,
+  "sltiu" = .Sltiu,
+  "xori"  = .Xori,
+  "ori"   = .Ori,
+  "andi"  = .Andi,
+  "jalr"  = .Jalr,
   // r-type instructions
   "add" = .Add,
+  "sub" = .Sub,
+  "sll" = .Sll,
+  "slt" = .Slt,
 
   // named registers
   "zero" = .Zero,
@@ -83,19 +91,36 @@ smap := map[string]Token_Kind{
   "x30" = .T5,
   "x31" = .T6,
 
+
 }
 
 itype_funct3 := #partial [Token_Kind]u8 {
-  .Addi = 0x0,
-  .Jalr = 0x0
+  .Addi   = 0x0,
+  .Slti   = 0x2,
+  .Sltiu  = 0x3,
+  .Xori   = 0x4,
+  .Ori    = 0x6,
+  .Andi   = 0x7,
+
+  .Jalr   = 0x0,
 }
 
 rtype_funct3 := #partial [Token_Kind]u8 {
   .Add = 0x0,
+  .Sub = 0x0,
+  .Sll = 0x1,
+  .Slt = 0x2,
+
 }
 
+#assert(len(rtype_funct3) == len(rtype_funct7))
+
 rtype_funct7 := #partial [Token_Kind]u8 {
-  .Add = 0x00
+  .Add = 0x00,
+  .Sub = 0x08,
+  .Sll = 0x00,
+  .Slt = 0x00,
+  
 }
 
 Token_Kind :: enum u16 {
@@ -105,6 +130,7 @@ Token_Kind :: enum u16 {
   Comma,
   Colon,
   Identifier,
+  // Registers
   Zero,
   RA,
   SP,
@@ -138,9 +164,26 @@ Token_Kind :: enum u16 {
   T5,
   T6,
 
+  // I Type Instructions
   Addi,
+  Slti,
+  Sltiu,
+  Xori,
+  Ori,
   Jalr,
+  Andi,
+  // R Type Instructions
   Add,
+  Sub,
+  Sll,
+  Slt,
+
+  // U Type
+  Lui,
+  Auipc,
+
+  // System
+  Ecall,
 }
 
 IType :: bit_field u32 {
@@ -159,6 +202,23 @@ RType :: bit_field u32 {
   rs2: u8 | 5,
   funct7: u8 | 7,
 }
+
+UType :: bit_field u32 {
+  opcode: u8 | 7,
+  rd: u8 | 5,
+  imm: u32 | 20,
+}
+
+SType :: bit_field u32 {
+  opcode: u8 | 7,
+  imml: u8 | 4,
+  funct3: u8 | 3,
+  rs1: u8 | 5,
+  rs2: u8 | 5, 
+  immh: u8 | 7,
+}
+
+
 
 Token :: struct {
   kind: Token_Kind,
@@ -197,7 +257,7 @@ assembler_init :: proc(a: ^Assembler, text: []byte, allocator:=context.allocator
   a.data = make([dynamic]u8)
   a.tokens = make([dynamic]Token, 0, 128)
   a.lines = make([dynamic]u32, 0, 128)
-
+  a.errors = make([dynamic]string)
   return a
 }
 
@@ -251,7 +311,8 @@ scan :: proc(a: ^Assembler) {
       case ',':
         curr += 1
         append_token(a, prev, curr, .Comma)
-      case '0'..='9':
+      case '-', '0'..='9':
+        if a.text[curr] == '-' do curr += 1
         // todo add hex, octal, binary
         for unicode.is_digit(rune(a.text[curr])) {
           curr += 1
@@ -269,17 +330,20 @@ parse :: proc(a: ^Assembler) {
   assert(a.lines != nil)
   assert(a.instructions != nil)
   assert(a.tokens != nil)
-  assert(a.errors != nil)
+  // assert(a.errors != nil)
 
   for i: u32 = 0; i < u32(len(a.tokens)); i += 1 {
     tok := a.tokens[i]
     #partial switch tok.kind {
-      case .Addi:
+      case .Addi, .Slti:
         produce_itype(a, &i, 0b0010011)
       case .Jalr:
         produce_itype(a, &i, 0b1100111)
-      case .Add:
+      case .Add, .Sub, .Slt, .Sll:
         produce_rtype(a, &i)
+      case .Lui, .Auipc:
+        produce_utype(a, &i)
+      
       case:
     }
 
@@ -374,7 +438,6 @@ produce_itype :: proc(a: ^Assembler, curr: ^u32, opcode: u8) {
       return  
     } else {
       reg = u8(tok.kind) - u8(Token_Kind.Zero) 
-      fmt.println(reg)
       assert(reg < 32)
     }
   
@@ -398,8 +461,10 @@ produce_itype :: proc(a: ^Assembler, curr: ^u32, opcode: u8) {
     advance_to_newline(&a.tokens, curr, &a.errors)
     return
   }
-  imm: u16 = 69 //todo make this actually work
 
+  imm := u16(strconv.atoi(string(a.text[tok.start:tok.end])))
+
+ 
   instruction := IType {
     opcode = opcode,
     rd = regs[0],
@@ -410,3 +475,65 @@ produce_itype :: proc(a: ^Assembler, curr: ^u32, opcode: u8) {
   
   append(&a.instructions, transmute(u32)instruction)
 } 
+
+produce_utype :: proc(a: ^Assembler, curr: ^u32) {
+  tok := a.tokens[curr^]
+  opcode: u8
+  #partial switch tok.kind {
+    case .Lui:
+      opcode = 0b0110111
+    case .Auipc:
+      opcode = 0b0010111
+    case:
+      panic("I dont know how this would happen")
+  }
+
+  curr^ += 1
+  tok = a.tokens[curr^]
+
+  if !is_register_token(tok.kind) {
+    line, col := get_pos(a, tok.start)
+    msg := fmt.tprintf("Error (%d, %d): expected register.", line, col)
+    append(&a.errors, msg)
+    advance_to_newline(&a.tokens, curr, &a.errors)
+    return
+  }
+
+  rd := u8(tok.kind) - u8(Token_Kind.Zero) 
+
+
+  curr^ += 1
+  tok = a.tokens[curr^]
+
+
+  if !token_expect(&a.tokens, curr^, .Comma) {
+    line, col := get_pos(a, tok.start)
+    msg := fmt.tprintf("Error (%d, %d): expected comma.", line, col)
+    append(&a.errors, msg)
+    advance_to_newline(&a.tokens, curr, &a.errors)
+    return 
+  }
+
+  
+  curr^ += 1
+  tok = a.tokens[curr^]
+  
+  
+  if !token_expect(&a.tokens, curr^, .Number) {
+    line, col := get_pos(a, tok.start)
+    msg := fmt.tprintf("Error (%d, %d): expected a number.", line, col)
+    append(&a.errors, msg)
+    advance_to_newline(&a.tokens, curr, &a.errors)
+    return 
+  }
+
+  imm := u32(strconv.atoi(string(a.text[tok.start:tok.end])))
+
+  instruction := UType{
+    opcode = opcode,
+    rd = rd,
+    imm = imm
+  }
+
+  append(&a.instructions, transmute(u32)instruction)
+}
