@@ -4,16 +4,7 @@ import "core:slice"
 import "core:fmt"
 import "core:c"
 
-fetch_decode_execute :: proc(m: ^Machine) {
-  instruction := (transmute(^u32)(&m.memory[m.pc]))^
-  // assume end of program if zero instruction
-  
-  if (instruction == 0) {
-    return
-  }
-
-  m.pc += 4 // set pc to next instruction
-
+decode_execute :: proc(m: ^Machine, instruction: u32) {
   opcode := Opcode_Kind((instruction & 0x7F))
   #partial switch opcode {
     case .load:
@@ -100,12 +91,36 @@ main :: proc() {
     0x00530293, // addi t0, t1, 5
     0x00540433  // add  s0, s0, t0
   }
-  
-  init_machine(m, &program)
-  
-  // run program
-  for {
-    fetch_decode_execute(m)
-  }
+  fmt.printf("instruction 1: %X\n", program)
+  instr := transmute(^u32)(&m.memory[0])
+  instr^ = 0x04500093
 
+  // program_instructions := (^[]u8)(&program)^
+  // copy_slice(m.memory, program_instructions[:]) // copy(mem[:], program[:])
+
+  // init_machine(m, &program)
+  // fmt.printf("program after: %X", program)
+  print_prog_mem(m)
+  // run program
+  // for {
+  //   // fetch instruction
+  //   instruction := (transmute(^u32)(&m.memory[m.pc]))^
+  //   fmt.printf("%X", instruction)
+  //   // assume end of program if zero instruction
+  //   if (instruction == 0) {
+  //   return
+  //   }
+
+  //   m.pc += 4 // set pc to next instruction
+  //   decode_execute(m, instruction)
+  // }
+
+}
+
+
+print_prog_mem :: proc(m: ^Machine) {
+  // print first 10 ish lines
+  for i:= 0; i < 10; i += 1 {
+    fmt.printf("%X\n", m.memory[i])
+  }
 }

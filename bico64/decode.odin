@@ -1,5 +1,75 @@
 package bico64
 
+
+/*----------------------------------------------------------
+instruction opcode, funct3/7 types
+----------------------------------------------------------*/
+
+Opcode_Kind :: enum u8 {
+  load      = 0b0000011, // I type; l{b|h|w|d} or l{b|h|w}u
+  fence     = 0b0001111, // I type; fence or fence.i
+  op_imm    = 0b0010011, // I type; arithmetic or logical immediate
+  auipc     = 0b0010111, // U type
+  op_imm_32 = 0b0011011, // I type; addiw, slliw, srliw, sraiw
+  store     = 0b0100011, // S/I type; S type if s{b|h|w}, I type if sd
+  store_FP  = 0b0100111,
+  op        = 0b0110011, // R type; arithmetic or logical no immediate
+  lui       = 0b0110111, // U type
+  op_32     = 0b0111011, // R type; addw, sllw, srlw, sraw
+  op_FP     = 0b1010011,
+  op_V      = 0b1010111,
+  branch    = 0b1100011, // SB type, beq, bne, blt, bge, bltu, bgeu
+  jal       = 0b1101111, // UJ type
+  jalr      = 0b1100111, // I type
+  system    = 0b1110011, // I type; cssr & environment calls
+}
+
+
+// arithmetic operations with immediate
+
+Op_Imm_Funct3_Kind :: enum u8 {
+  addi  = 0b000,
+  slli  = 0b001,
+  slti  = 0b010,
+  stliu = 0b011,
+  xori  = 0b100,
+  sr    = 0b101,  // srai & srli have the same funct3; differing funct7
+  ori   = 0b110,
+  andi  = 0b111,
+}
+
+Op_Imm_Funct7_Kind :: enum u8 {
+  srli = 0b0000000,
+  srai = 0b0100000
+}
+
+
+// arithmetic operations without immediate
+
+Op_Funct3_Kind :: enum u8 {
+  add  = 0b000, // also sub
+  sll  = 0b001,
+  slt  = 0b010,
+  sltu = 0b011,
+  xor  = 0b100,
+  sr  = 0b101, // srl & sra; differ by funct7
+  or   = 0b110,
+  and  = 0b111,
+}
+
+Op_Funct7_Kind :: enum u8 {
+  add = 0b0000000,
+  sub = 0b0100000,
+  srl = 0b0000000,
+  sra = 0b0100000
+}
+
+
+/*----------------------------------------------------------
+decode instruction functions & decoded instruction types
+----------------------------------------------------------*/
+
+
 // register operation
 RTypeInstruction :: bit_field u32 {
   opcode: u8 | 7,
