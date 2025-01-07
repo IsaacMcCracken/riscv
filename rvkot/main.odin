@@ -4,7 +4,7 @@ import mu "vendor:microui"
 import "core:fmt"
 import rl "vendor:raylib"
 import "core:unicode/utf8"
-import "../bico64"
+// import "../bico64"
 
 // State :: struct {
 
@@ -62,9 +62,10 @@ main :: proc() {
     sx, sy := window_get_mouse_scroll()
     mu.input_mouse_move(ctx, mx, my)
     mu.input_scroll(ctx, sx, sy)
+		
 
     microui_mouse_button_input(ctx, mx, my)
-
+		microui_key_input(ctx)
     /* GUI Update /(*o*)\ */
 		all_windows(ctx)
 
@@ -93,6 +94,33 @@ microui_mouse_button_input :: proc(ctx: ^mu.Context, x, y: i32)  {
       mu.input_mouse_up(ctx, x, y, b.mu_button)
     }
   }
+}
+
+microui_key_input :: proc(ctx: ^mu.Context) {
+	@static keys :=[?]struct{rl_key: rl.KeyboardKey, mu_key: mu.Key} {
+		{.LEFT_SHIFT, .SHIFT},
+		{.LEFT_CONTROL, .SHIFT},
+		{.LEFT_ALT, .ALT},
+		{.BACKSPACE, .BACKSPACE},
+		{.DELETE, .DELETE },
+		{.ENTER, .RETURN },
+		{.LEFT, .LEFT },
+		{.RIGHT, .RIGHT },
+		{.HOME, .HOME },
+		{.END, .END },
+		{.A, .A },
+		{.X, .X },
+		{.C, .C },
+		{.V, .V },
+	}
+
+	for key in keys {
+		if rl.IsKeyDown(key.rl_key) {
+			mu.input_key_down(ctx, key.mu_key)
+		} else {
+			mu.input_key_up(ctx, key.mu_key)
+		}
+	}
 }
 
 
