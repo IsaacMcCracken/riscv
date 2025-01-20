@@ -91,36 +91,23 @@ main :: proc() {
     0x00530293, // addi t0, t1, 5
     0x00540433  // add  s0, s0, t0
   }
-  fmt.printf("instruction 1: %X\n", program)
-  instr := transmute(^u32)(&m.memory[0])
-  instr^ = 0x04500093
 
-  // program_instructions := (^[]u8)(&program)^
-  // copy_slice(m.memory, program_instructions[:]) // copy(mem[:], program[:])
-
-  // init_machine(m, &program)
-  // fmt.printf("program after: %X", program)
-  print_prog_mem(m)
+  init_machine(m, program)
+  
   // run program
-  // for {
-  //   // fetch instruction
-  //   instruction := (transmute(^u32)(&m.memory[m.pc]))^
-  //   fmt.printf("%X", instruction)
-  //   // assume end of program if zero instruction
-  //   if (instruction == 0) {
-  //   return
-  //   }
+  for {
+    // fetch instruction
+    instruction := (transmute(^u32)(&m.memory[m.pc]))^
+    // stop program if noop
+    if (instruction == 0) {
+      return
+    }
 
-  //   m.pc += 4 // set pc to next instruction
-  //   decode_execute(m, instruction)
-  // }
+    fmt.printf("current isntruction: %X\n", instruction)
+    // assume end of program if zero instruction
 
-}
-
-
-print_prog_mem :: proc(m: ^Machine) {
-  // print first 10 ish lines
-  for i:= 0; i < 10; i += 1 {
-    fmt.printf("%X\n", m.memory[i])
+    m.pc += 4 // set pc to next instruction
+    decode_execute(m, instruction)
   }
+
 }
