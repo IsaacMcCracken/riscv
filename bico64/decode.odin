@@ -31,9 +31,9 @@ Op_Imm_Funct3_Kind :: enum u8 {
   addi  = 0b000,
   slli  = 0b001,
   slti  = 0b010,
-  stliu = 0b011,
+  sltiu = 0b011,
   xori  = 0b100,
-  sr    = 0b101,  // srai & srli have the same funct3; differing funct7
+  sri   = 0b101,  // srai & srli have the same funct3; differing funct7
   ori   = 0b110,
   andi  = 0b111,
 }
@@ -94,7 +94,7 @@ ITypeInstruction :: struct {
 }
 
 decode_i_type :: proc(instruction: u32) -> ITypeInstruction {
-  immediate := (u64)(instruction >> 20) * 0xFFF
+  immediate := (u64)(instruction >> 20) & 0xFFF
   // sign extend immediate if bit 11 is set
   if (immediate & 0x800 != 0) {
       immediate |= 0xFFFFFFFFFFFFF000
@@ -184,3 +184,65 @@ decode_uj_type :: proc(instruction: u32) -> UTypeInstruction {
     imm = transmute(i64) immediate
   }
 }
+
+
+exec_load :: proc(m: ^Machine, instruction: ^ITypeInstruction) {}
+exec_fence :: proc(m: ^Machine, instruction: ^ITypeInstruction) {}
+
+exec_op_imm :: proc(m: ^Machine, instruction: ^ITypeInstruction) {
+  switch Op_Imm_Funct3_Kind(instruction.funct3) {
+    case .addi:
+      m.x[instruction.rd].i = m.x[instruction.rs1].i + instruction.imm
+    case .slti:
+      m.x[instruction.rd].i = m.x[instruction.rs1].i < instruction.imm
+    case .sltiu:
+      m.x[instruction.rd].u = m.x[instruction.rs1].u < transmute(u64)instruction.imm
+    case .sri:
+      // check for shift right cases (arithmetic vs not)
+      m.x[instruction.rd].u = m.x[instruction.rs1].u >> transmute(u64)instruction.imm
+    case .xori:
+      m.x[instruction.rd].u = m.x[instruction.rs1].u ~ transmute(u64)instruction.imm
+    case .ori:
+      m.x[instruction.rd].u = m.x[instruction.rs1].u | transmute(u64)instruction.imm
+    case .andi:
+      m.x[instruction.rd].u = m.x[instruction.rs1].u & transmute(u64)instruction.imm
+    case .slli:
+      m.x[instruction.rd].u = m.x[instruction.rs1].u << transmute(u64)instruction.imm
+  }
+}
+
+exec_auipc :: proc(m: ^Machine, instruction: ^UTypeInstruction) {}
+exec_op_imm_32 :: proc(m: ^Machine, instruction: ^ITypeInstruction) {}
+exec_store :: proc(m: ^Machine, instruction: ^STypeInstruction) {}
+exec_store_FP :: proc(m: ^Machine) {}
+
+exec_op :: proc(m: ^Machine, instruction: ^RTypeInstruction) {
+  switch Op_Funct3_Kind(instruction.funct3) {
+    case .add:
+      m.x[instruction.rd].i = m.x[instruction.rs1].i + m.x[instruction.rs2].i
+    case .slt:
+      m.x[instruction.rd].i = m.x[instruction.rs1].i < m.x[instruction.rs2].i
+    case .sltu:
+      m.x[instruction.rd].u = m.x[instruction.rs1].u < transmute(u64)m.x[instruction.rs2]
+    case .sr:
+      // check for shift right cases (arithmetic vs not)
+      m.x[instruction.rd].u = m.x[instruction.rs1].u >> transmute(u64)m.x[instruction.rs2]
+    case .xor:
+      m.x[instruction.rd].u = m.x[instruction.rs1].u ~ transmute(u64)m.x[instruction.rs2]
+    case .or:
+      m.x[instruction.rd].u = m.x[instruction.rs1].u | transmute(u64)m.x[instruction.rs2]
+    case .and:
+      m.x[instruction.rd].u = m.x[instruction.rs1].u & transmute(u64)m.x[instruction.rs2]
+    case .sll:
+      m.x[instruction.rd].u = m.x[instruction.rs1].u << transmute(u64)m.x[instruction.rs2]
+  }
+}
+
+exec_lui :: proc(m: ^Machine, instruction: ^UTypeInstruction) {}
+exec_op_32 :: proc(m: ^Machine, instruction: ^RTypeInstruction) {}
+exec_op_FP :: proc(m: ^Machine) {}
+exec_op_V :: proc(m: ^Machine) {}
+exec_branch :: proc(m: ^Machine, instruction: ^STypeInstruction) {}
+exec_jal :: proc(m: ^Machine, instruction: ^UTypeInstruction) {}
+exec_jalr :: proc(m: ^Machine, instruction: ^ITypeInstruction) {}
+exec_system :: proc(m: ^Machine, instruction: ^ITypeInstruction) {}

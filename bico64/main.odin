@@ -2,7 +2,6 @@ package bico64
 import "base:runtime"
 import "core:slice"
 import "core:fmt"
-import "core:c"
 
 decode_execute :: proc(m: ^Machine, instruction: u32) {
   opcode := Opcode_Kind((instruction & 0x7F))
@@ -69,13 +68,6 @@ decode_execute :: proc(m: ^Machine, instruction: u32) {
   }
 }
 
-execute_i_type_int :: proc(m: ^Machine, instruction: ITypeInstruction) {
-  switch instruction.funct3 {
-    
-
-  }
-}
-
 
 main :: proc() {
   // store instructions at bottom part of memory
@@ -93,21 +85,23 @@ main :: proc() {
   }
 
   init_machine(m, program)
+  print_prog_mem(m)
+  print_regs(m)
   
   // run program
   for {
     // fetch instruction
     instruction := (transmute(^u32)(&m.memory[m.pc]))^
-    // stop program if noop
+    // assume end of program if zero instruction
     if (instruction == 0) {
       return
     }
-
     fmt.printf("current isntruction: %X\n", instruction)
-    // assume end of program if zero instruction
-
+    
     m.pc += 4 // set pc to next instruction
+    
     decode_execute(m, instruction)
+    print_regs(m)
   }
 
 }

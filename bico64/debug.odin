@@ -11,3 +11,10 @@ print_prog_mem :: proc(m: ^Machine) {
   }
   fmt.println()
 }
+
+print_regs :: proc(m: ^Machine) {
+  for i := 0; i < len(m.x); i+=1 {
+    fmt.printf("%X ", m.x[i].u)
+  }
+  fmt.println()
+}
