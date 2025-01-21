@@ -51,5 +51,5 @@ Machine :: struct {
   x: [32]IntegerReg,
   f: [32]FloatReg,
   pc: u64,
-  memory: []u8, // 1 megabyte
+  memory: []u8,
 }

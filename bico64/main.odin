@@ -71,7 +71,7 @@ decode_execute :: proc(m: ^Machine, instruction: u32) {
 
 main :: proc() {
   // store instructions at bottom part of memory
-  memory: [1024]u8
+  memory: [1024]u8 // 1 megabyte
 
   // set memory and create mmachine
   m := &Machine{
