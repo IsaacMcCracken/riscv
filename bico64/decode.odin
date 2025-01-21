@@ -198,8 +198,20 @@ exec_op_imm :: proc(m: ^Machine, instruction: ^ITypeInstruction) {
     case .sltiu:
       m.x[instruction.rd].u = m.x[instruction.rs1].u < transmute(u64)instruction.imm
     case .sri:
-      // check for shift right cases (arithmetic vs not)
-      m.x[instruction.rd].u = m.x[instruction.rs1].u >> transmute(u64)instruction.imm
+      msb := (instruction.imm & (1 << 11)) >> 11
+      switch Op_Imm_Funct7_Kind(msb) {
+        case .srai:
+          if (m.x[instruction.rs1].i < 0) {
+            m.x[instruction.rd].u = m.x[instruction.rs1].u >> transmute(u64)instruction.imm
+            ones_needed := (64 - transmute(u64)instruction.imm)
+            m.x[instruction.rd].u |= (-1 >> ones_needed) << ones_needed // this should make the result still have leading one's
+          }
+          else {
+            m.x[instruction.rd].u = m.x[instruction.rs1].u >> transmute(u64)instruction.imm
+          }
+        case .srli:
+          m.x[instruction.rd].u = m.x[instruction.rs1].u >> transmute(u64)instruction.imm
+      }
     case .xori:
       m.x[instruction.rd].u = m.x[instruction.rs1].u ~ transmute(u64)instruction.imm
     case .ori:
@@ -226,7 +238,19 @@ exec_op :: proc(m: ^Machine, instruction: ^RTypeInstruction) {
       m.x[instruction.rd].u = m.x[instruction.rs1].u < transmute(u64)m.x[instruction.rs2]
     case .sr:
       // check for shift right cases (arithmetic vs not)
-      m.x[instruction.rd].u = m.x[instruction.rs1].u >> transmute(u64)m.x[instruction.rs2]
+      switch Op_Funct7_Kind(instruction.funct7) {
+        case .sra:
+          if (m.x[instruction.rs1].i < 0) {
+            m.x[instruction.rd].u = m.x[instruction.rs1].u >> transmute(u64)m.x[instruction.rs2]
+            ones_needed := (64 - transmute(u64)m.x[instruction.rs2])
+            m.x[instruction.rd].u |= (-1 >> ones_needed) << ones_needed // this should make the result still have leading one's
+          }
+          else {
+            m.x[instruction.rd].u = m.x[instruction.rs1].u >> transmute(u64)m.x[instruction.rs2]
+          }
+        case .srl:
+          m.x[instruction.rd].u = m.x[instruction.rs1].u >> transmute(u64)m.x[instruction.rs2]
+      }
     case .xor:
       m.x[instruction.rd].u = m.x[instruction.rs1].u ~ transmute(u64)m.x[instruction.rs2]
     case .or:
