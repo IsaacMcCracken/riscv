@@ -53,13 +53,3 @@ Machine :: struct {
   pc: u64,
   memory: []u8, // 1 megabyte
 }
-
-init_machine :: proc(m: ^Machine, program: []u32) {
-  assert(size_of(m.memory) >= size_of(program))
-  
-  fixed_prog := slice.reinterpret([]u8, program)
-  copy_slice(m.memory, fixed_prog) // copy(mem[:], program[:])
-  print_prog_mem(m)
-  
-  m.pc = 0 // start at first instruction
-}

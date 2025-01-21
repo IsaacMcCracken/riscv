@@ -84,7 +84,11 @@ main :: proc() {
     0x00540433  // add  s0, s0, t0
   }
 
-  init_machine(m, program)
+  // load progam
+  assert(size_of(m.memory) >= size_of(program))
+  reinterpreted_prog := slice.reinterpret([]u8, program)
+  copy_slice(m.memory, reinterpreted_prog) // copy(mem[:], program[:])
+
   print_prog_mem(m)
   print_regs(m)
   
